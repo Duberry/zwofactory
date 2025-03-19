@@ -10,12 +10,12 @@ let chartInstance;
 function calculatePowerZones(ftp) {
     return [
         { name: ['Z1', 'Active Recovery', `0 - ${Math.round(0.55 * ftp)}`], min: 0, max: 0.55 * ftp },
-        { name: ['Z2',"Endurance", `${Math.round(0.55 * ftp)} - ${Math.round(0.75 * ftp)}`], min: 0.56 * ftp, max: 0.75 * ftp },
-        { name: ['Z3',"Tempo", `${Math.round(0.75 * ftp)} - ${Math.round(0.90 * ftp)}`], min: 0.76 * ftp, max: 0.90 * ftp },
-        { name: ['Z4',"Threshold", `${Math.round(0.90 * ftp)} - ${Math.round(1.05 * ftp)}`], min: 0.91 * ftp, max: 1.05 * ftp },
-        { name: ['Z5',"VO2 Max", `${Math.round(1.05 * ftp)} - ${Math.round(1.20 * ftp)}`], min: 1.06 * ftp, max: 1.20 * ftp },
-        { name: ['Z6',"Anaerobic", `${Math.round(1.20 * ftp)} - ${Math.round(1.50 * ftp)}`], min: 1.21 * ftp, max: 1.50 * ftp },
-        { name: ['Z7',"Neuromuscular", `${Math.round(1.50 * ftp)} - Destruction`], min: 1.51 * ftp, max: 10.0 * ftp }
+        { name: ['Z2', "Endurance", `${Math.round(0.55 * ftp)} - ${Math.round(0.75 * ftp)}`], min: 0.56 * ftp, max: 0.75 * ftp },
+        { name: ['Z3', "Tempo", `${Math.round(0.75 * ftp)} - ${Math.round(0.90 * ftp)}`], min: 0.76 * ftp, max: 0.90 * ftp },
+        { name: ['Z4', "Threshold", `${Math.round(0.90 * ftp)} - ${Math.round(1.05 * ftp)}`], min: 0.91 * ftp, max: 1.05 * ftp },
+        { name: ['Z5', "VO2 Max", `${Math.round(1.05 * ftp)} - ${Math.round(1.20 * ftp)}`], min: 1.06 * ftp, max: 1.20 * ftp },
+        { name: ['Z6', "Anaerobic", `${Math.round(1.20 * ftp)} - ${Math.round(1.50 * ftp)}`], min: 1.21 * ftp, max: 1.50 * ftp },
+        { name: ['Z7', "Neuromuscular", `${Math.round(1.50 * ftp)} - Destruction`], min: 1.51 * ftp, max: 10.0 * ftp }
     ];
 }
 
@@ -65,7 +65,7 @@ function updateChart(ftp) {
                     beginAtZero: true, ticks: {
                         callback: function (value) {
                             console.log(rawDurations.reduce((total, current) => total + current, 0));
-                            return Math.round((value*60/rawDurations.reduce((total, current) => total + current, 0)) * 100) + '%';
+                            return Math.round((value * 60 / rawDurations.reduce((total, current) => total + current, 0)) * 100) + '%';
                         }
                     }
                 }
@@ -74,11 +74,11 @@ function updateChart(ftp) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (userSettings.enableWorkoutInsertion) setupWorkoutInsertion(true);
     if (userSettings.enableUrlCreation) setupCreateWorkoutUrlButton(true);
     populateUserSettings();
-    
+
     var savedWorkout = null;
     var qs = new URLSearchParams(window.location.search);
     if (qs.has('n') && qs.has('w')) {
@@ -98,16 +98,19 @@ document.getElementById("chart").addEventListener("click", function (event) {
     event.preventDefault();
 
     data = returnInfo(currentWorkout.toZwoXml());
-
     rawPowerData = data.powers;
     rawDurations = data.durations;
 
     let ftp = userSettings.userFtp;
+    document.getElementById('Cal').textContent = data.totalCalories;
+    document.getElementById('kJoules').textContent = data.totalKj;
+    document.getElementById('FTP').textContent = userSettings.userFtp;
+    document.getElementById('workout_info').classList.remove('hidden');
     updateChart(ftp);
 });
 
 
-document.getElementById('divWorkoutInfo').addEventListener('input', function(e) {
+document.getElementById('divWorkoutInfo').addEventListener('input', function (e) {
     if (e.target.id == 'txtName') currentWorkout.name = e.target.value;
     if (e.target.id == 'txtDescription') currentWorkout.description = e.target.value;
     if (e.target.id == 'txtAuthor') currentWorkout.author = e.target.value;
@@ -115,15 +118,15 @@ document.getElementById('divWorkoutInfo').addEventListener('input', function(e) 
 });
 
 
-document.getElementById('divSegmentButtons').addEventListener('click', function(e) {
+document.getElementById('divSegmentButtons').addEventListener('click', function (e) {
     var svg;
-    if (e.target.tagName.toLowerCase() == 'svg') 
+    if (e.target.tagName.toLowerCase() == 'svg')
         svg = e.target;
-    else if (e.target.tagName.toLowerCase() == 'path') 
+    else if (e.target.tagName.toLowerCase() == 'path')
         svg = e.target.parentNode;
     else
         return;
-        
+
     var t = svg.getAttribute('data-t');
     if (!t) return;
     var p1 = svg.getAttribute('data-p-1');
@@ -137,7 +140,7 @@ document.getElementById('divSegmentButtons').addEventListener('click', function(
 }, false);
 
 
-document.getElementById('btnInsertWorkout').addEventListener('click', function(e) {
+document.getElementById('btnInsertWorkout').addEventListener('click', function (e) {
     var selectedWorkoutName = document.getElementById('selWorkout').value;
     var workout = new Workout();
     workout.reconstituteFromDeserialized(userSettings.getMyWorkout(selectedWorkoutName));
@@ -148,10 +151,10 @@ document.getElementById('btnInsertWorkout').addEventListener('click', function(e
 });
 
 
-document.getElementById('btnDuplicate').addEventListener('click', function() {
+document.getElementById('btnDuplicate').addEventListener('click', function () {
     var selected = getSelectedSegment();
     if (!selected) return;
-    
+
     var segmentToDuplicate = currentWorkout.segments.find(s => s.id == selected.getAttribute('data-id'));
     var duplicatedSegment = new Segment();
     duplicatedSegment.duplicateFrom(segmentToDuplicate);
@@ -160,7 +163,7 @@ document.getElementById('btnDuplicate').addEventListener('click', function() {
 });
 
 
-document.getElementById('btnSelectPrevious').addEventListener('click', function() {
+document.getElementById('btnSelectPrevious').addEventListener('click', function () {
     var selected = getSelectedSegment();
     if (!selected) return;
     if (!selected.previousSibling) return;
@@ -168,7 +171,7 @@ document.getElementById('btnSelectPrevious').addEventListener('click', function(
 });
 
 
-document.getElementById('btnSelectNext').addEventListener('click', function() {
+document.getElementById('btnSelectNext').addEventListener('click', function () {
     var selected = getSelectedSegment();
     if (!selected) return;
     if (!selected.nextSibling) return;
@@ -176,35 +179,35 @@ document.getElementById('btnSelectNext').addEventListener('click', function() {
 });
 
 
-document.getElementById('btnMoveLeft').addEventListener('click', function(e) {
+document.getElementById('btnMoveLeft').addEventListener('click', function (e) {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
     var previousBlock = selectedSegment.previousElementSibling;
     if (!previousBlock) return;
-    
+
     var index = currentWorkout.segments.findIndex(s => s.id == selectedSegment.getAttribute('data-id'));
     var temp = currentWorkout.segments[index];
-    currentWorkout.segments[index] = currentWorkout.segments[index-1];
-    currentWorkout.segments[index-1] = temp;
+    currentWorkout.segments[index] = currentWorkout.segments[index - 1];
+    currentWorkout.segments[index - 1] = temp;
     selectedSegment.parentNode.insertBefore(selectedSegment, previousBlock);
 });
 
 
-document.getElementById('btnMoveRight').addEventListener('click', function(e) {
+document.getElementById('btnMoveRight').addEventListener('click', function (e) {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
     var nextBlock = selectedSegment.nextElementSibling;
     if (!nextBlock) return;
-    
+
     var index = currentWorkout.segments.findIndex(s => s.id == selectedSegment.getAttribute('data-id'));
     var temp = currentWorkout.segments[index];
-    currentWorkout.segments[index] = currentWorkout.segments[index+1];
-    currentWorkout.segments[index+1] = temp;
+    currentWorkout.segments[index] = currentWorkout.segments[index + 1];
+    currentWorkout.segments[index + 1] = temp;
     selectedSegment.parentNode.insertBefore(nextBlock, selectedSegment);
 });
 
 
-document.getElementById('btnDelete').addEventListener('click', function(e) {
+document.getElementById('btnDelete').addEventListener('click', function (e) {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
     var index = currentWorkout.segments.findIndex(s => s.id == selectedSegment.getAttribute('data-id'));
@@ -226,12 +229,12 @@ document.getElementById('btnDelete').addEventListener('click', function(e) {
 });
 
 
-document.getElementById('divSegmentChart').addEventListener('change', function(e) {
+document.getElementById('divSegmentChart').addEventListener('change', function (e) {
     loadSegmentInfo(e.target.id);
 });
 
 
-document.getElementById('btnShowCadence').addEventListener('click', function() {
+document.getElementById('btnShowCadence').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
 
@@ -239,7 +242,7 @@ document.getElementById('btnShowCadence').addEventListener('click', function() {
 });
 
 
-document.getElementById('btnShowTextEvents').addEventListener('click', function() {
+document.getElementById('btnShowTextEvents').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
 
@@ -247,17 +250,17 @@ document.getElementById('btnShowTextEvents').addEventListener('click', function(
 });
 
 
-document.getElementById('btnShowOptions').addEventListener('click', function() {
+document.getElementById('btnShowOptions').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
-    
+
     var chkDisableFlatRoad = document.getElementById('chkDisableFlatRoad');
     var segment = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id'));
     if (segment.t == 'f')
         chkDisableFlatRoad.removeAttribute('disabled');
     else
         chkDisableFlatRoad.setAttribute('disabled', 'disabled');
-        
+
     showModal('divModalOptions');
 });
 
@@ -268,14 +271,14 @@ document.getElementById('btnDismissOptions').addEventListener('click', dismissMo
 document.getElementById('btnDismissUrl').addEventListener('click', dismissModal);
 document.getElementById('btnDismissSettings').addEventListener('click', dismissModal);
 
-document.getElementById('chkCadence').addEventListener('click', function() {
+document.getElementById('chkCadence').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
-    
+
     var txtC1 = document.getElementById('txtC1');
     var txtC2 = document.getElementById('txtC2');
     var segmentObj = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id'));
-    
+
     if (this.checked) {
         segmentObj.c1 = 90;
         txtC1.value = 90;
@@ -298,11 +301,11 @@ document.getElementById('chkCadence').addEventListener('click', function() {
         txtC2.setAttribute('disabled', true);
     }
 
-    txtC1.dispatchEvent(new Event('input', {bubbles:true,cancelable:true}));
+    txtC1.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
 });
 
 
-document.getElementById('chkShowAvg').addEventListener('click', function() {
+document.getElementById('chkShowAvg').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
     var segmentObj = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id'));
@@ -310,7 +313,7 @@ document.getElementById('chkShowAvg').addEventListener('click', function() {
 });
 
 
-document.getElementById('chkDisableFlatRoad').addEventListener('click', function() {
+document.getElementById('chkDisableFlatRoad').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
     var segmentObj = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id'));
@@ -318,12 +321,12 @@ document.getElementById('chkDisableFlatRoad').addEventListener('click', function
 });
 
 
-document.getElementById('divSegmentInputs').addEventListener('input', function(e) {
+document.getElementById('divSegmentInputs').addEventListener('input', function (e) {
     if (e.target.tagName != 'INPUT' && e.target.tagName != 'BUTTON') return;
 
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
-    
+
     var segment = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id'));
     var targetProperty = e.target.getAttribute('data-target');
     var label = selectedSegment.querySelector('label');
@@ -352,13 +355,13 @@ document.getElementById('divSegmentInputs').addEventListener('input', function(e
 });
 
 
-document.getElementById('btnAddTextEvent').addEventListener('click', function() {
+document.getElementById('btnAddTextEvent').addEventListener('click', function () {
     var selectedSegment = getSelectedSegment();
     if (!selectedSegment) return;
     var text = document.querySelector('#divTextEventToClone input').value;
     var offset = document.querySelector('#divTextEventToClone input[type=number]').value;
     var id = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id')).addTextEvent(text, offset);
-    addTextEventControls({id:id,text:text,offset:offset});
+    addTextEventControls({ id: id, text: text, offset: offset });
     var segment = currentWorkout.segments.find(s => s.id == selectedSegment.getAttribute('data-id'));
     var label = selectedSegment.querySelector('label');
     label.innerHTML = '';
@@ -369,7 +372,7 @@ document.getElementById('btnAddTextEvent').addEventListener('click', function() 
 });
 
 
-document.getElementById('divTextEvents').addEventListener('click', function(e) {
+document.getElementById('divTextEvents').addEventListener('click', function (e) {
     if (e.target.tagName != 'BUTTON') return;
     var divToDelete = e.target.parentNode.parentNode;
     var selectedSegment = getSelectedSegment();
@@ -386,44 +389,44 @@ document.getElementById('divTextEvents').addEventListener('click', function(e) {
 });
 
 
-document.getElementById('btnSaveToMyWorkouts').addEventListener('click', function() {
+document.getElementById('btnSaveToMyWorkouts').addEventListener('click', function () {
     if (!currentWorkout.name) {
         var name = getName();
         currentWorkout.name = name;
         document.getElementById('txtName').value = name;
     }
-    
+
     var existingWorkout = userSettings.getMyWorkout(currentWorkout.name);
 
     if (existingWorkout) {
-        var response = confirm('You already have a workout named ' + currentWorkout.name +'. Do you want to overwrite it?');
-        if (!response) return; 
+        var response = confirm('You already have a workout named ' + currentWorkout.name + '. Do you want to overwrite it?');
+        if (!response) return;
     }
 
     userSettings.saveMyWorkout(currentWorkout);
     var savedDiv = this.parentNode.querySelector('.saved');
     savedDiv.classList.remove('saved');
-    setTimeout(function() { savedDiv.classList.add('saved'); }, 2200);
+    setTimeout(function () { savedDiv.classList.add('saved'); }, 2200);
 
     if (userSettings.enableWorkoutInsertion) setupWorkoutInsertion(true);
 });
 
 
-document.getElementById('btnDownloadZwoFile').addEventListener('click', function() {
-    if (!currentWorkout.name)  {
+document.getElementById('btnDownloadZwoFile').addEventListener('click', function () {
+    if (!currentWorkout.name) {
         var name = getName();
         currentWorkout.name = name;
         document.getElementById('txtName').value = name;
     }
 
     var xml = currentWorkout.toZwoXml();
-    var blob = new Blob([xml], {type: "application/octet-stream"});
+    var blob = new Blob([xml], { type: "application/octet-stream" });
     var fileName = currentWorkout.name.replace(/[^A-Z0-9]/ig, '_') + '.zwo';;
     saveAs(blob, fileName);
 });
 
 
-document.getElementById('btnCreateUrl').addEventListener('click', function() {
+document.getElementById('btnCreateUrl').addEventListener('click', function () {
     if (!currentWorkout.name) {
         var name = getName();
         currentWorkout.name = name;
@@ -438,13 +441,13 @@ document.getElementById('btnCreateUrl').addEventListener('click', function() {
 });
 
 
-document.getElementById('aSettings').addEventListener('click', function() {
+document.getElementById('aSettings').addEventListener('click', function () {
     showModal('divModalSettings');
 });
 
 
-document.getElementById('btnDismissSettings').addEventListener('click', function(e) {
-    var checkboxes  = document.querySelectorAll('#divModalSettings input[type=checkbox]');
+document.getElementById('btnDismissSettings').addEventListener('click', function (e) {
+    var checkboxes = document.querySelectorAll('#divModalSettings input[type=checkbox]');
     for (var i = 0; i < checkboxes.length; i++) {
         userSettings[checkboxes[i].getAttribute('data-key')] = checkboxes[i].checked;
     }
@@ -460,18 +463,18 @@ document.getElementById('btnDismissSettings').addEventListener('click', function
     setupCreateWorkoutUrlButton(userSettings.enableUrlCreation);
     updateTimeInMinutes();
     updateAbsolutePower();
-    if (userSettings.displayTss) 
+    if (userSettings.displayTss)
         document.getElementById('spanTss').innerHTML = currentWorkout.calculateScore();
-    else 
+    else
         document.getElementById('spanTss').innerHTML = '';
-    if (userSettings.displayXp) 
+    if (userSettings.displayXp)
         document.getElementById('spanXp').innerHTML = currentWorkout.calculateXp() + " XP";
-    else 
+    else
         document.getElementById('spanXp').innerHTML = '';
 });
 
 
-document.getElementById('divSegmentChart').addEventListener('dragenter', function(e) {
+document.getElementById('divSegmentChart').addEventListener('dragenter', function (e) {
     e.stopPropagation();
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -479,31 +482,31 @@ document.getElementById('divSegmentChart').addEventListener('dragenter', functio
 }, false);
 
 
-document.getElementById('divSegmentChart').addEventListener('dragleave', function(e) {
+document.getElementById('divSegmentChart').addEventListener('dragleave', function (e) {
     e.stopPropagation();
     e.preventDefault();
     this.classList.remove('dragover');
 }, false);
 
 
-document.getElementById('divSegmentChart').addEventListener('dragover', function(e) {
+document.getElementById('divSegmentChart').addEventListener('dragover', function (e) {
     e.stopPropagation();
     e.preventDefault();
 }, false);
 
 
-document.getElementById('divSegmentChart').addEventListener('drop', function(e) {
+document.getElementById('divSegmentChart').addEventListener('drop', function (e) {
     e.stopPropagation();
     e.preventDefault();
     this.classList.remove('dragover');
-    var files = e.dataTransfer.files; 
+    var files = e.dataTransfer.files;
     if (files.length != 1) return;
     var ext = files[0].name.toLowerCase().substr(-4);
-    var acceptableExts = ['.zwo','.erg','.mrc'];
+    var acceptableExts = ['.zwo', '.erg', '.mrc'];
     if (acceptableExts.indexOf(ext) < 0) return;
 
     var reader = new FileReader();
-    reader.onload = function(event) {
+    reader.onload = function (event) {
         var text = event.target.result;
         var workout = new Workout();
         if (ext == '.zwo')
@@ -529,15 +532,15 @@ function setupWorkoutInsertion(enable) {
         btn.setAttribute('hidden', '');
         return;
     }
-    
+
     sel.innerHTML = '';
 
-    var workouts = userSettings.getAllMyWorkouts().sort(function(a,b) {
+    var workouts = userSettings.getAllMyWorkouts().sort(function (a, b) {
         if (a.name > b.name) return 1;
         if (a.name < b.name) return -1;
         if (a.name == b.name) return 0;
     });
-    
+
     for (var i = 0; i < workouts.length; i++) {
         var option = document.createElement("option");
         option.text = workouts[i].name;
@@ -550,7 +553,7 @@ function setupCreateWorkoutUrlButton(enable) {
     var buttonSave = document.querySelector('#divButtons > div:nth-child(1)');
     var buttonUrl = document.querySelector('#divButtons > div:nth-child(2)');
     var buttonDownload = document.querySelector('#divButtons > div:nth-child(3)');
-    
+
     if (enable) {
         buttonSave.classList.remove('u-1-2');
         buttonDownload.classList.remove('u-1-2');
@@ -588,7 +591,7 @@ function loadWorkout(workout) {
 
 
 function populateUserSettings() {
-    var checkboxes  = document.querySelectorAll('#divModalSettings input[type=checkbox]');
+    var checkboxes = document.querySelectorAll('#divModalSettings input[type=checkbox]');
     for (var i = 0; i < checkboxes.length; i++) {
         checkboxes[i].checked = userSettings[checkboxes[i].getAttribute('data-key')];
     }
@@ -633,14 +636,14 @@ function loadSegmentInfo(segmentId) {
     var divTexts = document.getElementById('divTextEvents');
     var selected = currentWorkout.segments.find(s => s.id === segmentId);
     var chkShowAvg = document.getElementById('chkShowAvg');
-    var chkDisableFlatRoad =  document.getElementById('chkDisableFlatRoad');
-    
+    var chkDisableFlatRoad = document.getElementById('chkDisableFlatRoad');
+
     if (selected.r) { txtR.value = selected.r; txtR.removeAttribute('disabled'); } else { txtR.value = ''; txtR.setAttribute('disabled', true); }
     if (selected.d2) { txtD2.value = selected.d2; txtD2.removeAttribute('disabled'); } else { txtD2.value = ''; txtD2.setAttribute('disabled', true); }
     if (selected.p2) { txtP2.value = selected.p2; txtP2.removeAttribute('disabled'); } else { txtP2.value = ''; txtP2.setAttribute('disabled', true); }
     if (selected.d1) { txtD1.value = selected.d1; txtD1.removeAttribute('disabled'); } else { txtD1.value = ''; txtD1.setAttribute('disabled', true); }
     if (selected.p1) { txtP1.value = selected.p1; txtP1.removeAttribute('disabled'); } else { txtP1.value = ''; txtP1.setAttribute('disabled', true); }
-    if (selected.c1) { txtC1.value = selected.c1; txtC1.removeAttribute('disabled'); chkCadence.checked = true; } else { txtC1.value = ''; txtC1.setAttribute('disabled', true); chkCadence.checked = false;  }
+    if (selected.c1) { txtC1.value = selected.c1; txtC1.removeAttribute('disabled'); chkCadence.checked = true; } else { txtC1.value = ''; txtC1.setAttribute('disabled', true); chkCadence.checked = false; }
     if (selected.c2) { txtC2.value = selected.c2; txtC2.removeAttribute('disabled'); } else { txtC2.value = ''; txtC2.setAttribute('disabled', true); }
     if (selected.avg) chkShowAvg.checked = true; else chkShowAvg.checked = false;
     if (selected.dfr) chkDisableFlatRoad.checked = true; else chkDisableFlatRoad.checked = false;
@@ -665,14 +668,14 @@ function updateTimeInMinutes() {
         if (txtD1.hasAttribute('disabled')) {
             divD1.setAttribute('hidden', '');
         } else {
-            divD1.removeAttribute('hidden'); 
+            divD1.removeAttribute('hidden');
             divD1.innerText = secondsToMinutes(txtD1.value);
         }
 
         if (txtD2.hasAttribute('disabled')) {
             divD2.setAttribute('hidden', '');
         } else {
-            divD2.removeAttribute('hidden'); 
+            divD2.removeAttribute('hidden');
             divD2.innerText = secondsToMinutes(txtD2.value);
         }
     } else {
@@ -695,7 +698,7 @@ function updateAbsolutePower() {
         if (txtP1.hasAttribute('disabled')) {
             divP1.setAttribute('hidden', '');
         } else {
-            divP1.removeAttribute('hidden'); 
+            divP1.removeAttribute('hidden');
             divP1.innerText = Math.round(txtP1.value / 100 * userSettings.userFtp) + ' W';
             if (txtP1.value >= 119) divP1.classList.add('z6');
             else if (txtP1.value >= 105) divP1.classList.add('z5');
@@ -708,7 +711,7 @@ function updateAbsolutePower() {
         if (txtP2.hasAttribute('disabled')) {
             divP2.setAttribute('hidden', '');
         } else {
-            divP2.removeAttribute('hidden'); 
+            divP2.removeAttribute('hidden');
             divP2.innerText = Math.round(txtP2.value / 100 * userSettings.userFtp) + ' W';
             if (txtP2.value >= 119) divP2.classList.add('z6');
             else if (txtP2.value >= 105) divP2.classList.add('z5');
@@ -726,19 +729,19 @@ function updateAbsolutePower() {
 
 function loadNoSegment() {
     var txtR = document.querySelector('#txtR');
-    txtR.value = ''; 
+    txtR.value = '';
     txtR.setAttribute('disabled', true);
     var txtD1 = document.querySelector('#txtD1');
-    txtD1.value = ''; 
+    txtD1.value = '';
     txtD1.setAttribute('disabled', true);
     var txtP1 = document.querySelector('#txtP1');
-    txtP1.value = ''; 
+    txtP1.value = '';
     txtP1.setAttribute('disabled', true);
     var txtD2 = document.querySelector('#txtD2');
-    txtD2.value = ''; 
+    txtD2.value = '';
     txtD2.setAttribute('disabled', true);
     var txtP2 = document.querySelector('#txtP2');
-    txtP2.value = ''; 
+    txtP2.value = '';
     txtP2.setAttribute('disabled', true);
 }
 
@@ -764,7 +767,7 @@ function addTextEventControls(textEvent) {
     clone.classList.remove('invisible');
     document.getElementById('divTextEvents').appendChild(clone);
     var childNodes = document.getElementById('divTextEvents').childNodes;
-    var addedElement = childNodes[childNodes.length-1];
+    var addedElement = childNodes[childNodes.length - 1];
     addedElement.setAttribute('id', textEvent.id);
     addedElement.querySelector('input').value = textEvent.text;
     addedElement.querySelector('input[type=number]').value = textEvent.offset;
