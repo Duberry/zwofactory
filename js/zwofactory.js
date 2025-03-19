@@ -272,6 +272,66 @@ Workout.prototype.toUrl = function() {
     return url;
 };
 
+function returnInfo(xml) {
+    // Parse the XML string into an XML document.
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xml, "text/xml");
+
+    // Check if there's a parsing error.
+    if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+        return { error: "Invalid XML" };
+    }
+
+    // Get the <workout> element.
+    const workoutElement = xmlDoc.getElementsByTagName("workout")[0];
+    if (!workoutElement) {
+        return { error: "No workout element found" };
+    }
+
+    const powerValues = [];
+    const durations = [];
+
+    // Iterate over each child element of <workout>
+    Array.from(workoutElement.children).forEach(step => {
+        const tag = step.tagName;
+        
+        if (tag === "SteadyState") {
+            // For SteadyState, use the Power attribute.
+            const duration = parseInt(step.getAttribute("Duration"), 10);
+            const power = parseFloat(step.getAttribute("Power"));
+            powerValues.push(power);
+            durations.push(duration);
+        } else if (tag === "Warmup" || tag === "Cooldown") {
+            // For Warmup/Cooldown, average PowerLow and PowerHigh.
+            const duration = parseInt(step.getAttribute("Duration"), 10);
+            const powerLow = parseFloat(step.getAttribute("PowerLow"));
+            const powerHigh = parseFloat(step.getAttribute("PowerHigh"));
+            const power = (powerLow + powerHigh) / 2;
+            powerValues.push(power);
+            durations.push(duration);
+        } else if (tag === "IntervalsT") {
+            // For IntervalsT, process the on-phase and off-phase for each repetition.
+            const repeat = parseInt(step.getAttribute("Repeat"), 10);
+            const onDuration = parseInt(step.getAttribute("OnDuration"), 10);
+            const offDuration = parseInt(step.getAttribute("OffDuration"), 10);
+            const onPower = parseFloat(step.getAttribute("OnPower"));
+            const offPower = parseFloat(step.getAttribute("OffPower"));
+
+            for (let i = 0; i < repeat; i++) {
+                if (onDuration > 0) {
+                    powerValues.push(onPower);
+                    durations.push(onDuration);
+                }
+                if (offDuration > 0) {
+                    powerValues.push(offPower);
+                    durations.push(offDuration);
+                }
+            }
+        }
+    });
+
+    return { powers: powerValues, durations: durations };
+}
 Workout.prototype.loadFromXml = function(xml) {
     parser = new DOMParser();
     xmlDoc = parser.parseFromString(xml, "text/xml");
