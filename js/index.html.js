@@ -9,13 +9,13 @@ let chartInstance;
 // Define power zones as a function of FTP
 function calculatePowerZones(ftp) {
     return [
-        { name: ['Active Recovery', `0 - ${Math.round(0.55 * ftp)}`], min: 0, max: 0.55 * ftp },
-        { name: ["Endurance", `${Math.round(0.56 * ftp)} - ${Math.round(0.75 * ftp)}`], min: 0.56 * ftp, max: 0.75 * ftp },
-        { name: ["Tempo", `${Math.round(0.76 * ftp)} - ${Math.round(0.90 * ftp)}`], min: 0.76 * ftp, max: 0.90 * ftp },
-        { name: ["Threshold", `${Math.round(0.91 * ftp)} - ${Math.round(1.05 * ftp)}`], min: 0.91 * ftp, max: 1.05 * ftp },
-        { name: ["VO2 Max", `${Math.round(1.06 * ftp)} - ${Math.round(1.20 * ftp)}`], min: 1.06 * ftp, max: 1.20 * ftp },
-        { name: ["Anaerobic", `${Math.round(1.21 * ftp)} - ${Math.round(1.50 * ftp)}`], min: 1.21 * ftp, max: 1.50 * ftp },
-        { name: ["Neuromuscular", `${Math.round(1.51 * ftp)} - Destruction`], min: 1.51 * ftp, max: 10.0 * ftp }
+        { name: ['Z1', 'Active Recovery', `0 - ${Math.round(0.55 * ftp)}`], min: 0, max: 0.55 * ftp },
+        { name: ['Z2',"Endurance", `${Math.round(0.55 * ftp)} - ${Math.round(0.75 * ftp)}`], min: 0.56 * ftp, max: 0.75 * ftp },
+        { name: ['Z3',"Tempo", `${Math.round(0.75 * ftp)} - ${Math.round(0.90 * ftp)}`], min: 0.76 * ftp, max: 0.90 * ftp },
+        { name: ['Z4',"Threshold", `${Math.round(0.90 * ftp)} - ${Math.round(1.05 * ftp)}`], min: 0.91 * ftp, max: 1.05 * ftp },
+        { name: ['Z5',"VO2 Max", `${Math.round(1.05 * ftp)} - ${Math.round(1.20 * ftp)}`], min: 1.06 * ftp, max: 1.20 * ftp },
+        { name: ['Z6',"Anaerobic", `${Math.round(1.20 * ftp)} - ${Math.round(1.50 * ftp)}`], min: 1.21 * ftp, max: 1.50 * ftp },
+        { name: ['Z7',"Neuromuscular", `${Math.round(1.50 * ftp)} - Destruction`], min: 1.51 * ftp, max: 10.0 * ftp }
     ];
 }
 
