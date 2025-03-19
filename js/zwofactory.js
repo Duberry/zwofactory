@@ -272,57 +272,59 @@ Workout.prototype.toUrl = function () {
     return url;
 };
 
+/**
+ * Parses a ZWO workout (XML string) and returns various metrics including
+ * a "power curve" computed at specific target durations, plus carbohydrate
+ * and water requirements per hour based on energy expenditure.
+ *
+ * @param {string} xml - The ZWO file contents as a string.
+ * @param {number} ftp - Athlete’s FTP in watts.
+ * @returns {object} Object with keys:
+ *   - powers: array of normalized power values (fraction of FTP) per segment,
+ *   - durations: corresponding durations in seconds,
+ *   - totalKj: approximate total energy in kilojoules,
+ *   - totalCalories: approximate total energy in kilocalories,
+ *   - powerCurve: array of { duration, power } for target durations,
+ *   - totalSec: total exercise duration in seconds,
+ *   - carbPerHour: carbohydrate requirement in grams per hour,
+ *   - waterPerHour: water requirement in litres per hour.
+ */
 function returnInfo(xml, ftp = userSettings.userFtp) {
-    // Parse the XML string into an XML document
+    // --- 1. Parse the XML ---
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xml, "text/xml");
-
-    // Check for a parsing error
     if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
         return { error: "Invalid XML" };
     }
-
-    // Get the <workout> element
     const workoutElement = xmlDoc.getElementsByTagName("workout")[0];
     if (!workoutElement) {
-        return { error: "No workout element found" };
+        return { error: "No <workout> element found" };
     }
 
-    const powerValues = [];
-    const durations = [];
-    // We'll also sum up the energy for each segment in Joules.
-    let totalJoules = 0;
+    // --- 2. Extract segment data from the workout ---
+    const powerValues = []; // normalized power values (fraction of FTP)
+    const durations = [];   // durations (in seconds)
 
-    // Assume 20% efficiency, so metabolic energy is roughly mechanical energy * 5.
-    const efficiencyFactor = 1 / 0.20; // equals 5
-
-    // Iterate over each child element in <workout>
     Array.from(workoutElement.children).forEach(step => {
         const tag = step.tagName;
-        let duration = 0;
-        let power = 0;
         if (tag === "SteadyState") {
-            // For SteadyState, use the "Power" attribute.
-            duration = parseInt(step.getAttribute("Duration"), 10);
-            power = parseFloat(step.getAttribute("Power"));
+            const duration = parseInt(step.getAttribute("Duration"), 10);
+            const power = parseFloat(step.getAttribute("Power"));
             powerValues.push(power);
             durations.push(duration);
         } else if (tag === "Warmup" || tag === "Cooldown") {
-            // For Warmup/Cooldown, average "PowerLow" and "PowerHigh".
-            duration = parseInt(step.getAttribute("Duration"), 10);
+            const duration = parseInt(step.getAttribute("Duration"), 10);
             const powerLow = parseFloat(step.getAttribute("PowerLow"));
             const powerHigh = parseFloat(step.getAttribute("PowerHigh"));
-            power = (powerLow + powerHigh) / 2;
+            const power = (powerLow + powerHigh) / 2; // average
             powerValues.push(power);
             durations.push(duration);
         } else if (tag === "IntervalsT") {
-            // For IntervalsT, process both on and off phases.
             const repeat = parseInt(step.getAttribute("Repeat"), 10);
             const onDuration = parseInt(step.getAttribute("OnDuration"), 10);
             const offDuration = parseInt(step.getAttribute("OffDuration"), 10);
             const onPower = parseFloat(step.getAttribute("OnPower"));
             const offPower = parseFloat(step.getAttribute("OffPower"));
-
             for (let i = 0; i < repeat; i++) {
                 if (onDuration > 0) {
                     powerValues.push(onPower);
@@ -336,25 +338,89 @@ function returnInfo(xml, ftp = userSettings.userFtp) {
         }
     });
 
-    // Now calculate the approximate energy expenditure.
-    // For each segment, the absolute power in watts is (normalized power * ftp).
-    // Mechanical energy (in Joules) = power (W) * duration (s).
-    // Metabolic energy expended (Joules) is higher due to efficiency (e.g., *5 for 20% efficiency).
+    // --- 3. Build second-by-second powerData array (absolute watts) ---
+    const powerData = []; // each element represents power (W) for one second
+    let totalSec = 0;
     for (let i = 0; i < powerValues.length; i++) {
-        const segmentWatts = powerValues[i] * ftp;
-        const mechanicalEnergy = segmentWatts * durations[i]; // in Joules
-        totalJoules += mechanicalEnergy * efficiencyFactor;
+        const absPower = powerValues[i] * ftp; // convert fraction-of-FTP to watts
+        const d = durations[i];
+        for (let s = 0; s < d; s++) {
+            powerData.push(absPower);
+        }
+        totalSec += d;
     }
 
-    // Convert Joules to kilojoules and Calories.
+    // --- 4. Compute total energy expenditure ---
+    // Energy per second = power (W) * 1 sec (Joules), then sum all seconds.
+    let totalJoules = powerData.reduce((acc, p) => acc + p, 0);
+    // Assume 20% mechanical efficiency: metabolic energy ≈ mechanical energy * 5.
+    totalJoules *= 5;
     const totalKj = totalJoules / 1000;
-    const totalCalories = totalKj / 4.184; // since 1 kcal ≈ 4.184 kJ
+    const totalCalories = totalKj / 4.184;
+
+    // --- 5. Compute prefix sum for efficient sliding window computation ---
+    // prefixSum[i] = sum of powerData[0] .. powerData[i-1]
+    const prefixSum = [0];
+    for (let i = 0; i < totalSec; i++) {
+        prefixSum[i + 1] = prefixSum[i] + powerData[i];
+    }
+
+    // --- 6. Define target durations (in seconds) for the power curve ---
+    // Fixed targets (in seconds): 1s, 15s, 1min, 5min, 10min, 20min, 30min, 45min, 1hr, 1.5hr.
+    const fixedTargets = [1, 15, 60, 300, 600, 1200, 1800, 2700, 3600, 5400];
+    // Only include targets that are less than or equal to the total workout time.
+    let targets = fixedTargets.filter(t => t <= totalSec);
+
+    // For workouts longer than 2 hours (7200s), add additional targets in 1-hr increments.
+    if (totalSec > 7200) {
+        for (let t = 7200; t <= totalSec; t += 3600) {
+            targets.push(t);
+        }
+    }
+    // Ensure targets are sorted in ascending order.
+    targets.sort((a, b) => a - b);
+
+    // --- 7. Compute the power curve at each target duration ---
+    // For each target d, find the maximum average power over any contiguous window of length d.
+    const powerCurve = [];
+    targets.forEach(d => {
+        let maxAvg = 0;
+        for (let start = 0; start <= totalSec - d; start++) {
+            const windowSum = prefixSum[start + d] - prefixSum[start];
+            const avgPower = windowSum / d;
+            if (avgPower > maxAvg) {
+                maxAvg = avgPower;
+            }
+        }
+        powerCurve.push({ duration: d, power: maxAvg });
+    });
+
+
+    // --- 8. Calculate carbohydrate and water requirements per hour ---
+    // Compute exercise duration in hours.
+    const hours = totalSec / 3600;
+    // Avoid division by zero:
+    const effectiveHours = hours > 0 ? hours : 1;
+    // kJ burned per hour.
+    const kJPerHour = totalKj / effectiveHours;
+
+    // Updated formulas for exercise:
+    // Carbohydrates (g/h) = min(max(kJ/h / 84, 30), 60)
+    const carbPerHour = Math.min(Math.max(kJPerHour / 84, 30), 60);
+    // Water (L/h) = min(max(kJ/h / 4000, 0.4), 1.0)
+    const waterPerHour = Math.min(Math.max(kJPerHour / 4000, 0.4), 1.0);
 
     return {
         powers: powerValues,
         durations: durations,
         totalKj: Math.round(totalKj),
-        totalCalories: Math.round(totalCalories)
+        totalCalories: Math.round(totalCalories),
+        powerCurve: powerCurve,
+        totalSec: totalSec,
+        carbPerHour: carbPerHour,
+        carbs: Math.round(carbPerHour*hours),
+        waterPerHour: waterPerHour,
+        water: Math.round((waterPerHour*1000)*hours)
     };
 }
 

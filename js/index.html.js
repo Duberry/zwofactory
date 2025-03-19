@@ -53,7 +53,7 @@ function updateChart(ftp) {
             labels: labels,
             seconds: rawDurations.reduce((total, current) => total + current, 0),
             datasets: [{
-                label: "Time in Zone (minutes)",
+                label: "Programmed Time in Zone (minutes)",
                 data: zoneTimes,
                 backgroundColor: "rgba(75, 192, 192, 0.6)"
             }]
@@ -73,6 +73,93 @@ function updateChart(ftp) {
         }
     });
 }
+
+/**
+ * Formats a duration (in seconds) into a human-readable string.
+ * Examples:
+ *   1      => "1 s"
+ *   15     => "15 s"
+ *   60     => "1 min"
+ *   300    => "5 min"
+ *   3600   => "1 hr"
+ *   5400   => "1.5 hr"
+ *
+ * @param {number} seconds - Duration in seconds.
+ * @returns {string} The formatted duration string.
+ */
+function formatDuration(seconds) {
+    if (seconds < 60) {
+        return seconds + " s";
+    } else if (seconds < 3600) {
+        const minutes = seconds / 60;
+        return (minutes % 1 === 0) ? minutes + " min" : minutes.toFixed(1) + " min";
+    } else {
+        const hours = seconds / 3600;
+        return (hours % 1 === 0) ? hours + " hr" : hours.toFixed(1) + " hr";
+    }
+}
+
+/**
+ * Renders a power curve chart in the <canvas id="lineChart"> element.
+ *
+ * @param {Array} powerCurveData - Array of objects: { duration: number, power: number }
+ */
+function updatePowerCurveChart(powerCurveData) {
+    // Extract durations (in seconds) and power values from powerCurveData.
+    const durations = powerCurveData.map(point => point.duration);
+    const powers = powerCurveData.map(point => point.power);
+    const ctx = document.getElementById("curveChart").getContext("2d");
+    // If a previous chart exists, destroy it.
+    if (window.powerCurveChart) {
+        window.powerCurveChart.destroy();
+    }
+
+    window.powerCurveChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: durations, // These are the durations in seconds.
+            datasets: [{
+                label: 'Programmed Power Curve (W)',
+                data: powerCurveData.map(pt => ({ x: pt.duration, y: pt.power })),
+                fill: false,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.1,
+                pointRadius: 0 // For a cleaner line, you can hide the points.
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'logarithmic',
+                    position: 'bottom',
+                    // Override the default tick generation with our custom ticks.
+                    afterBuildTicks: axis => axis.ticks = durations.map(v => ({ value: v })),
+                    title: {
+                        display: true,
+                        text: 'Duration'
+                    },
+                    ticks: {
+                        autoSkip: false, // prevent Chart.js from auto-skipping ticks
+                        // Format tick labels using the helper function.
+                        callback: function (value) {
+                            return formatDuration(value);
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 1000,
+                    title: {
+                        display: true,
+                        text: 'Max Avg Power (W)'
+                    }
+                }
+            }
+        }
+    });
+}
+
 
 document.addEventListener('DOMContentLoaded', function () {
     if (userSettings.enableWorkoutInsertion) setupWorkoutInsertion(true);
@@ -98,6 +185,7 @@ document.getElementById("chart").addEventListener("click", function (event) {
     event.preventDefault();
 
     data = returnInfo(currentWorkout.toZwoXml());
+    console.log(data);
     rawPowerData = data.powers;
     rawDurations = data.durations;
 
@@ -105,8 +193,11 @@ document.getElementById("chart").addEventListener("click", function (event) {
     document.getElementById('Cal').textContent = data.totalCalories;
     document.getElementById('kJoules').textContent = data.totalKj;
     document.getElementById('FTP').textContent = userSettings.userFtp;
+    document.getElementById('Carbs').textContent = data.carbs;
+    document.getElementById('Water').textContent = data.water;
     document.getElementById('workout_info').classList.remove('hidden');
     updateChart(ftp);
+    updatePowerCurveChart(data.powerCurve);
 });
 
 

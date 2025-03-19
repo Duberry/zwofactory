@@ -129,3 +129,6 @@ svg { display: inline-block; }
 .hidden {
     display: none!important;
 }
+.bottom_line {
+    border-bottom: 1px solid;
+}
